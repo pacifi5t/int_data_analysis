@@ -14,3 +14,9 @@ ndarray = {version = "0.15.6", features = ["approx-0_5"]}
 ndarray-rand = "0.14.0"
 rand_xoshiro = "0.6.0"
 approx = "0.5.1"
+polars = {version = "0.24.3", features = ["ndarray"]}
+
+[profile.dev]
+lto = true          # Enable Link Time Optimization
+panic = 'abort'     # Abort on panic
+strip = true        # Strip symbols from binary*
