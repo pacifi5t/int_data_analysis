@@ -7,14 +7,13 @@ use linfa_clustering::KMeans;
 use ndarray::{array, Axis};
 use ndarray_rand::rand::SeedableRng;
 use rand_xoshiro::Xoshiro256Plus;
-use std::env::current_dir;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let expected_centroids = array![[0., 1.], [-10., 20.], [-1., 10.]];
     let n_clusters = expected_centroids.len_of(Axis(0));
 
-    let filepath = current_dir()?.as_path().join("data/clusters.csv");
+    let filepath = "data/clusters_old.csv";
     let mut reader = ReaderBuilder::new().has_headers(true).from_path(filepath)?;
     let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
     let data = records_into_array(&records);

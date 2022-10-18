@@ -1,11 +1,10 @@
+use csv::Writer;
 use linfa_datasets::generate;
-use ndarray::{array, ArrayView1};
+use ndarray::array;
 use ndarray_rand::rand::SeedableRng;
-use polars::prelude::*;
 use rand_xoshiro::Xoshiro256Plus;
-use std::env::current_dir;
 use std::error::Error;
-use std::fs::File;
+use std::fs::create_dir;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let expected_centroids = array![[0., 1.], [-10., 20.], [-1., 10.]];
@@ -14,18 +13,17 @@ fn main() -> Result<(), Box<dyn Error>> {
         &expected_centroids,
         &mut Xoshiro256Plus::seed_from_u64(42),
     );
-    let mut df = DataFrame::new(vec![
-        column_into_series("x", &data.column(0)),
-        column_into_series("y", &data.column(1)),
-    ])?;
-    let filepath = current_dir()?.as_path().join("data/clusters.csv");
-    CsvWriter::new(File::create(filepath)?)
-        .has_header(true)
-        .finish(&mut df)?;
+
+    create_dir("data").unwrap_or(());
+    let mut writer = Writer::from_path("data/clusters.csv")?;
+
+    writer.write_record(&["x", "y"])?;
+    for row in data.rows() {
+        let vec: Vec<String> = row.into_iter().map(|e| e.to_string()).collect();
+        writer
+            .write_record(vec.as_slice())
+            .expect("Written successfully");
+    }
 
     Ok(())
-}
-
-fn column_into_series(name: &str, data: &ArrayView1<f64>) -> Series {
-    Float64Chunked::new(name, data.into_owned().into_raw_vec()).into_series()
 }
