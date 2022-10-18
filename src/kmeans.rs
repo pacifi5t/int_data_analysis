@@ -1,4 +1,7 @@
-use ndarray::{Array2, ArrayView1};
+use crate::utils::euclidean_distance;
+use approx::abs_diff_eq;
+use ndarray::{Array2, ArrayView1, Axis};
+use ndarray_rand::rand_distr::num_traits::Float;
 use rand::{thread_rng, Rng};
 
 pub struct KMeans {
@@ -9,7 +12,7 @@ pub struct KMeans {
 
 impl Default for KMeans {
     fn default() -> Self {
-        Self::new(3, 1e-2, 100)
+        Self::new(3, 1e-1, 100)
     }
 }
 
@@ -37,9 +40,51 @@ impl KMeans {
         self
     }
 
-    pub fn fit(&self, dataset: &Array2<f64>) {
-        let initial_clusters = self.plus_plus_init(dataset);
-        println!("{:?}", initial_clusters);
+    pub fn fit(&self, dataset: &Array2<f64>) -> Model {
+        let mut n_run = 0;
+        let mut centroids = self.plus_plus_init(dataset);
+        let mut previous_centroids = centroids.clone();
+        let mut clustered_data_indexes: Vec<Vec<usize>> = Vec::new();
+        for _ in 0..centroids.len() {
+            clustered_data_indexes.push(Vec::new());
+        }
+        println!("Initial centroids {:?}\n", centroids);
+
+        while n_run < self.max_n_iterations {
+            previous_centroids = centroids.clone();
+            for i in 0..clustered_data_indexes.len() {
+                clustered_data_indexes[i].clear();
+            }
+
+            for ei in 0..dataset.nrows() {
+                let mut closest_centroid = (0, f64::max_value());
+                for ci in 0..centroids.nrows() {
+                    let distance = euclidean_distance(dataset.row(ei), centroids.row(ci));
+                    if distance < closest_centroid.1 {
+                        closest_centroid = (ci, distance);
+                    }
+                }
+                clustered_data_indexes[closest_centroid.0].push(ei);
+            }
+
+            for ci in 0..centroids.nrows() {
+                let mut array: Array2<f64> = Array2::zeros((0, centroids.ncols()));
+                for ei in &clustered_data_indexes[ci] {
+                    array.push_row(dataset.row(*ei)).unwrap();
+                }
+                centroids
+                    .row_mut(ci)
+                    .assign(&array.mean_axis(Axis(0)).unwrap());
+            }
+            println!("Run {} {:?}\n", n_run, centroids);
+            n_run += 1;
+
+            if abs_diff_eq!(centroids, previous_centroids, epsilon = self.tolerance) {
+                break;
+            }
+        }
+
+        Model { centroids }
     }
 
     fn plus_plus_init(&self, dataset: &Array2<f64>) -> Array2<f64> {
@@ -55,7 +100,7 @@ impl KMeans {
                 }
 
                 for ci in &centroid_indexes {
-                    let distance = Self::euclidian_distance(dataset.row(i), dataset.row(*ci));
+                    let distance = euclidean_distance(dataset.row(i), dataset.row(*ci));
                     if distance > max_distance.1 {
                         max_distance = (i, distance);
                     }
@@ -65,21 +110,13 @@ impl KMeans {
         }
 
         let mut array: Array2<f64> = Array2::zeros((0, dataset.ncols()));
-        for a in centroid_indexes.into_iter().map(|x| dataset.row(x)) {
+        for a in centroid_indexes.into_iter().map(|i| dataset.row(i)) {
             array.push_row(a).expect("Row lengths match");
         }
         array
     }
-
-    fn euclidian_distance(point1: ArrayView1<f64>, point2: ArrayView1<f64>) -> f64 {
-        let mut sum: f64 = 0.0;
-        for i in 0..point1.len() {
-            sum += (point1[i].clone() - point2[i].clone()).powi(2);
-        }
-        sum.sqrt()
-    }
 }
 
-pub struct Model<T> {
-    centroids: Array2<T>,
+pub struct Model {
+    pub centroids: Array2<f64>,
 }
