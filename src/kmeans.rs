@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, Axis, ShapeError};
+use ndarray::{Array2, ArrayView1};
 use rand::{thread_rng, Rng};
 
 pub struct KMeans {
@@ -38,18 +38,40 @@ impl KMeans {
     }
 
     pub fn fit(&self, dataset: &Array2<f64>) {
-        // let initial_clusters = self.plus_plus_init(dataset);
+        let initial_clusters = self.plus_plus_init(dataset);
+        println!("{:?}", initial_clusters);
     }
 
-    fn plus_plus_init(&self, dataset: &Array2<f64>) -> Result<(), ShapeError> {
+    fn plus_plus_init(&self, dataset: &Array2<f64>) -> Array2<f64> {
         let mut rng = thread_rng();
-        let mut initial_centroids = Array2::zeros([0, dataset.ndim()]);
-        initial_centroids.push(Axis(0), dataset.row(rng.gen()))?;
+        let mut centroid_indexes: Vec<usize> = Vec::new();
+        centroid_indexes.push(rng.gen_range(0..dataset.nrows()));
 
-        Ok(())
+        while centroid_indexes.len() < self.n_clusters as usize {
+            let mut max_distance: (usize, f64) = (0, 0.0); // (index of point, distance)
+            for i in 0..dataset.nrows() {
+                if centroid_indexes.contains(&i) {
+                    continue;
+                }
+
+                for ci in &centroid_indexes {
+                    let distance = Self::euclidian_distance(dataset.row(i), dataset.row(*ci));
+                    if distance > max_distance.1 {
+                        max_distance = (i, distance);
+                    }
+                }
+            }
+            centroid_indexes.push(max_distance.0);
+        }
+
+        let mut array: Array2<f64> = Array2::zeros((0, dataset.ncols()));
+        for a in centroid_indexes.into_iter().map(|x| dataset.row(x)) {
+            array.push_row(a).expect("Row lengths match");
+        }
+        array
     }
 
-    fn euclid_distance(point1: Array1<f64>, point2: Array1<f64>) -> f64 {
+    fn euclidian_distance(point1: ArrayView1<f64>, point2: ArrayView1<f64>) -> f64 {
         let mut sum: f64 = 0.0;
         for i in 0..point1.len() {
             sum += (point1[i].clone() - point2[i].clone()).powi(2);
