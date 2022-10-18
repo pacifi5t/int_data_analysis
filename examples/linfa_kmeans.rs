@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let expected_centroids = array![[0., 1.], [-10., 20.], [-1., 10.]];
     let n_clusters = expected_centroids.len_of(Axis(0));
 
-    let filepath = "data/clusters_old.csv";
+    let filepath = "data/clusters.csv";
     let mut reader = ReaderBuilder::new().has_headers(true).from_path(filepath)?;
     let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
     let data = records_into_array(&records);
@@ -36,5 +36,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         epsilon = 1e-1
     );
 
+    println!("Result\n{:?}", model.centroids());
     Ok(())
 }

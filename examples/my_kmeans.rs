@@ -6,12 +6,12 @@ use std::error::Error;
 fn main() -> Result<(), Box<dyn Error>> {
     let n_clusters = 3;
 
-    let filepath = "data/clusters_old.csv";
+    let filepath = "data/clusters.csv";
     let mut reader = ReaderBuilder::new().has_headers(true).from_path(filepath)?;
     let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
     let data = records_into_array(&records);
 
-    KMeans::default().n_clusters(n_clusters).fit(&data);
-
+    let model = KMeans::default().n_clusters(n_clusters).fit(&data);
+    println!("Result {:?}", model.centroids);
     Ok(())
 }
