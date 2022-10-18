@@ -1,23 +1,23 @@
 use approx::assert_abs_diff_eq;
+use csv::{ReaderBuilder, StringRecord};
+use int_data_analysis::utils::records_into_array;
 use linfa::traits::{Fit, Predict};
 use linfa::DatasetBase;
 use linfa_clustering::KMeans;
 use ndarray::{array, Axis};
 use ndarray_rand::rand::SeedableRng;
-use polars::prelude::*;
 use rand_xoshiro::Xoshiro256Plus;
 use std::env::current_dir;
 use std::error::Error;
-use std::fs::File;
-use std::io::BufReader;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let expected_centroids = array![[0., 1.], [-10., 20.], [-1., 10.]];
     let n_clusters = expected_centroids.len_of(Axis(0));
 
     let filepath = current_dir()?.as_path().join("data/clusters.csv");
-    let reader = CsvReader::new(BufReader::new(File::open(filepath)?)).has_header(true);
-    let data = reader.finish()?.to_ndarray::<Float64Type>()?;
+    let mut reader = ReaderBuilder::new().has_headers(true).from_path(filepath)?;
+    let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
+    let data = records_into_array(&records);
 
     let dataset = DatasetBase::from(data.clone());
     let model = KMeans::params_with_rng(n_clusters, Xoshiro256Plus::seed_from_u64(42))
