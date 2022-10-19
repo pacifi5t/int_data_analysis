@@ -12,6 +12,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let data = records_into_array(&records);
 
     let model = KMeans::default().n_clusters(n_clusters).fit(&data);
-    println!("Result {:?}", model.centroids);
+    println!("Result {:?}", model.centroids());
     Ok(())
 }

@@ -41,29 +41,13 @@ impl KMeans {
     }
 
     pub fn fit(&self, dataset: &Array2<f64>) -> Model {
-        let mut n_run = 0;
         let mut centroids = self.plus_plus_init(dataset);
-        let mut previous_centroids = centroids.clone();
-        let mut clustered_data_indexes: Vec<Vec<usize>> = Vec::new();
-        for _ in 0..centroids.len() {
-            clustered_data_indexes.push(Vec::new());
-        }
-        println!("Initial centroids {:?}\n", centroids);
-
-        while n_run < self.max_n_iterations {
-            previous_centroids = centroids.clone();
-            for i in 0..clustered_data_indexes.len() {
-                clustered_data_indexes[i].clear();
-            }
+        for _ in 0..self.max_n_iterations {
+            let previous_centroids = centroids.clone();
+            let mut clustered_data_indexes = self.init_clustered_data_index_vec();
 
             for ei in 0..dataset.nrows() {
-                let mut closest_centroid = (0, f64::max_value());
-                for ci in 0..centroids.nrows() {
-                    let distance = euclidean_distance(dataset.row(ei), centroids.row(ci));
-                    if distance < closest_centroid.1 {
-                        closest_centroid = (ci, distance);
-                    }
-                }
+                let closest_centroid = Self::get_closest_centroid(dataset.row(ei), &centroids);
                 clustered_data_indexes[closest_centroid.0].push(ei);
             }
 
@@ -72,25 +56,20 @@ impl KMeans {
                 for ei in &clustered_data_indexes[ci] {
                     array.push_row(dataset.row(*ei)).unwrap();
                 }
-                centroids
-                    .row_mut(ci)
-                    .assign(&array.mean_axis(Axis(0)).unwrap());
+                let new_centroid = array.mean_axis(Axis(0)).expect("Should be > 0");
+                centroids.row_mut(ci).assign(&new_centroid);
             }
-            println!("Run {} {:?}\n", n_run, centroids);
-            n_run += 1;
 
             if abs_diff_eq!(centroids, previous_centroids, epsilon = self.tolerance) {
                 break;
             }
         }
-
         Model { centroids }
     }
 
     fn plus_plus_init(&self, dataset: &Array2<f64>) -> Array2<f64> {
-        let mut rng = thread_rng();
         let mut centroid_indexes: Vec<usize> = Vec::new();
-        centroid_indexes.push(rng.gen_range(0..dataset.nrows()));
+        centroid_indexes.push(thread_rng().gen_range(0..dataset.nrows()));
 
         while centroid_indexes.len() < self.n_clusters as usize {
             let mut max_distance: (usize, f64) = (0, 0.0); // (index of point, distance)
@@ -115,8 +94,33 @@ impl KMeans {
         }
         array
     }
+
+    fn init_clustered_data_index_vec(&self) -> Vec<Vec<usize>> {
+        let mut clustered_data_indexes: Vec<Vec<usize>> = Vec::new();
+        for _ in 0..self.n_clusters {
+            clustered_data_indexes.push(Vec::new());
+        }
+        clustered_data_indexes
+    }
+
+    fn get_closest_centroid(point: ArrayView1<f64>, centroids: &Array2<f64>) -> (usize, f64) {
+        let mut closest_centroid = (0, f64::max_value());
+        for ci in 0..centroids.nrows() {
+            let distance = euclidean_distance(point, centroids.row(ci));
+            if distance < closest_centroid.1 {
+                closest_centroid = (ci, distance);
+            }
+        }
+        closest_centroid
+    }
 }
 
 pub struct Model {
-    pub centroids: Array2<f64>,
+    centroids: Array2<f64>,
+}
+
+impl Model {
+    pub fn centroids(&self) -> Array2<f64> {
+        self.centroids.clone()
+    }
 }
