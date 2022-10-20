@@ -47,7 +47,7 @@ impl KMeans {
             let mut clustered_data_indexes = self.init_clustered_data_index_vec();
 
             for ei in 0..dataset.nrows() {
-                let closest_centroid = Self::get_closest_centroid(dataset.row(ei), &centroids);
+                let closest_centroid = get_closest_centroid(dataset.row(ei), &centroids);
                 clustered_data_indexes[closest_centroid.0].push(ei);
             }
 
@@ -102,17 +102,6 @@ impl KMeans {
         }
         clustered_data_indexes
     }
-
-    fn get_closest_centroid(point: ArrayView1<f64>, centroids: &Array2<f64>) -> (usize, f64) {
-        let mut closest_centroid = (0, f64::max_value());
-        for ci in 0..centroids.nrows() {
-            let distance = euclidean_distance(point, centroids.row(ci));
-            if distance < closest_centroid.1 {
-                closest_centroid = (ci, distance);
-            }
-        }
-        closest_centroid
-    }
 }
 
 pub struct Model {
@@ -123,4 +112,19 @@ impl Model {
     pub fn centroids(&self) -> Array2<f64> {
         self.centroids.clone()
     }
+
+    pub fn predict(&self, point: ArrayView1<f64>) -> usize {
+        get_closest_centroid(point, &self.centroids).0
+    }
+}
+
+fn get_closest_centroid(point: ArrayView1<f64>, centroids: &Array2<f64>) -> (usize, f64) {
+    let mut closest_centroid = (0, f64::max_value());
+    for ci in 0..centroids.nrows() {
+        let distance = euclidean_distance(point, centroids.row(ci));
+        if distance < closest_centroid.1 {
+            closest_centroid = (ci, distance);
+        }
+    }
+    closest_centroid
 }
