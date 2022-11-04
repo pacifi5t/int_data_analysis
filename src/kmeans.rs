@@ -42,12 +42,15 @@ impl KMeans {
 
     pub fn fit(&self, dataset: &Array2<f64>) -> Model {
         let mut centroids = self.plus_plus_init(dataset);
+        let mut inertia = f64::MAX;
         for _ in 0..self.max_n_iterations {
+            let mut run_inertia = 0.0;
             let previous_centroids = centroids.clone();
             let mut clustered_data_indexes = self.init_clustered_data_index_vec();
 
             for ei in 0..dataset.nrows() {
                 let closest_centroid = get_closest_centroid(dataset.row(ei), &centroids);
+                run_inertia += closest_centroid.1.powi(2);
                 clustered_data_indexes[closest_centroid.0].push(ei);
             }
 
@@ -61,10 +64,11 @@ impl KMeans {
             }
 
             if abs_diff_eq!(centroids, previous_centroids, epsilon = self.tolerance) {
+                inertia = run_inertia / dataset.nrows() as f64;
                 break;
             }
         }
-        Model { centroids }
+        Model { centroids, inertia }
     }
 
     fn plus_plus_init(&self, dataset: &Array2<f64>) -> Array2<f64> {
@@ -106,11 +110,16 @@ impl KMeans {
 
 pub struct Model {
     centroids: Array2<f64>,
+    inertia: f64,
 }
 
 impl Model {
     pub fn centroids(&self) -> Array2<f64> {
         self.centroids.clone()
+    }
+
+    pub fn inertia(&self) -> f64 {
+        self.inertia.clone()
     }
 
     pub fn predict(&self, point: ArrayView1<f64>) -> usize {
