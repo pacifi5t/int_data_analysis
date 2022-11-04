@@ -2,14 +2,13 @@ use chrono::Utc;
 use csv::{ReaderBuilder, StringRecord};
 use int_data_analysis::kmeans::{KMeans, Model};
 use int_data_analysis::utils::records_into_array;
-use linfa::prelude::Fit;
-use linfa::DatasetBase;
 use ndarray::{s, Array1, Array2, ArrayView1, Axis};
 use plotters::backend::BitMapBackend;
 use plotters::prelude::{
-    ChartBuilder, Color, IntoDrawingArea, IntoFont, LineSeries, ShapeStyle, BLACK, BLUE, CYAN,
-    GREEN, MAGENTA, RED, WHITE, YELLOW,
+    ChartBuilder, Circle, Color, IntoDrawingArea, IntoFont, LineSeries, ShapeStyle, BLACK, BLUE,
+    CYAN, GREEN, MAGENTA, RED, WHITE, YELLOW,
 };
+use std::collections::HashMap;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -19,18 +18,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
     let data = records_into_array(&records);
 
-    let n_clusters = 3;
-    let model = KMeans::default().n_clusters(n_clusters).fit(&data);
-    println!("Result\n{:?}", model.centroids());
+    println!("Clusters - Inertia");
+    let mut models: HashMap<u32, Model> = HashMap::new();
+    for n_clusters in 1..=6 {
+        let model = KMeans::default().n_clusters(n_clusters).fit(&data);
+        println!("{n_clusters} - {}", model.inertia());
+        models.insert(n_clusters, model);
+    }
+
+    let best_model = models.get(&4).unwrap();
+    println!("Result\n{:?}", best_model.centroids());
 
     let now = Utc::now().format("(%Y-%m-%d %H:%M:%S)").to_string();
     let filepath = format!("figures/examples/wine_quality {}.png", now);
-    create_plot("Wine quality", filepath, &model, &data)?;
-
-    let linfa_model =
-        linfa_clustering::KMeans::params(n_clusters as usize).fit(&DatasetBase::from(data))?;
-    println!("Linfa\n{:?}", linfa_model.centroids());
-
+    create_plot("Wine quality", filepath, best_model, &data)?;
     Ok(())
 }
 
@@ -82,6 +83,11 @@ fn create_plot(
             each.iter().enumerate().map(|(x, y)| (x, *y)),
             map_index_to_color(ctr),
         ))?;
+        chart_ctx.draw_series(
+            each.iter()
+                .enumerate()
+                .map(|(x, y)| Circle::new((x, *y), 3, map_index_to_color(ctr).filled())),
+        )?;
         ctr += 1;
     }
 
@@ -95,7 +101,7 @@ fn normalize_centroids(centroids: &Array2<f64>, data: &Array2<f64>) -> Array2<f6
         .expect("Should be fine");
     let normalized = normalize_data(&temp);
     normalized
-        .slice(s![normalized.nrows() - 3.., ..])
+        .slice(s![normalized.nrows() - centroids.nrows().., ..])
         .into_owned()
 }
 
@@ -140,10 +146,10 @@ fn map_index_to_color(index: usize) -> ShapeStyle {
         0 => RED,
         1 => GREEN,
         2 => BLUE,
-        3 => YELLOW,
+        3 => MAGENTA,
         4 => CYAN,
-        5 => MAGENTA,
+        5 => YELLOW,
         _ => BLACK,
     };
-    color.filled().stroke_width(3)
+    color.into()
 }
