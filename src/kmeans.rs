@@ -3,6 +3,7 @@ use approx::abs_diff_eq;
 use ndarray::{Array2, ArrayView1, Axis};
 use ndarray_rand::rand_distr::num_traits::Float;
 use rand::{thread_rng, Rng};
+use std::fmt::Debug;
 
 pub struct KMeans {
     n_clusters: u32,
@@ -124,6 +125,26 @@ impl Model {
 
     pub fn predict(&self, point: ArrayView1<f64>) -> usize {
         get_closest_centroid(point, &self.centroids).0
+    }
+}
+
+impl Debug for Model {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[")?;
+
+        for (i, row) in self.centroids.rows().into_iter().enumerate() {
+            if i != 0 {
+                write!(f, " ")?;
+            }
+
+            write!(f, "{:?}", row.to_vec())?;
+
+            if i != self.centroids.nrows() - 1 {
+                write!(f, ",\n")?;
+            }
+        }
+
+        write!(f, "]\nShape: {:?}", self.centroids.shape())
     }
 }
 
