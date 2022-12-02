@@ -1,7 +1,7 @@
 use chrono::Utc;
 use csv::{ReaderBuilder, StringRecord};
+use example_utils::records_into_array;
 use int_data_analysis::kmeans::{KMeans, Model};
-use int_data_analysis::utils::records_into_array;
 use ndarray::{Array2, Axis};
 use plotters::prelude::*;
 use std::error::Error;

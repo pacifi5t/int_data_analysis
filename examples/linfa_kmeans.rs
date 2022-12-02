@@ -1,6 +1,6 @@
 use approx::assert_abs_diff_eq;
 use csv::{ReaderBuilder, StringRecord};
-use int_data_analysis::utils::records_into_array;
+use example_utils::records_into_array;
 use linfa::traits::{Fit, Predict};
 use linfa::DatasetBase;
 use linfa_clustering::KMeans;

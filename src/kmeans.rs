@@ -1,4 +1,4 @@
-use crate::utils::euclidean_distance;
+use super::euclidean_distance;
 use approx::abs_diff_eq;
 use ndarray::{Array2, ArrayView1, Axis};
 use ndarray_rand::rand_distr::num_traits::Float;
