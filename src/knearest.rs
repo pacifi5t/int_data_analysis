@@ -1,26 +1,26 @@
-use std::collections::HashMap;
 use crate::euclidean_distance;
 use ndarray::{Array2, ArrayView1, Axis};
+use std::collections::HashMap;
 
 pub struct KNearest {
     k: usize,
     data: Array2<f64>,
-    class_labels: Vec<usize>,
+    class_markers: Vec<usize>,
 }
 
 impl KNearest {
-    pub fn new(k: usize, data: Array2<f64>, class_labels: Vec<usize>) -> Self {
+    pub fn new(k: usize, data: Array2<f64>, class_markers: Vec<usize>) -> Self {
         KNearest {
             k,
             data,
-            class_labels,
+            class_markers,
         }
     }
 
     pub fn predict(&self, point: ArrayView1<f64>) -> usize {
         let mut distances = Vec::new();
         for (i, each) in self.data.axis_iter(Axis(0)).enumerate() {
-            let class = self.class_labels[i];
+            let class = self.class_markers[i];
             distances.push((class, euclidean_distance(point, each)))
         }
 
@@ -32,7 +32,7 @@ impl KNearest {
     fn find_dominant_class(nearest: &Vec<usize>) -> usize {
         let mut class_counts = HashMap::<usize, usize>::new();
         for each in nearest {
-            if let Some(class) = class_counts.get_mut(&each) {
+            if let Some(class) = class_counts.get_mut(each) {
                 *class += 1;
             } else {
                 class_counts.insert(*each, 1);
