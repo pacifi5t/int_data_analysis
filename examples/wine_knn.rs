@@ -3,7 +3,6 @@ use csv::{ReaderBuilder, StringRecord};
 use example_utils::*;
 use int_data_analysis::*;
 use ndarray::{s, Array1, Array2, Axis};
-use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use rand::prelude::*;
 use rand_xoshiro::Xoshiro256Plus;
@@ -11,6 +10,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs::create_dir_all;
 use std::io::stdin;
+use std::ops::Range;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let data = parse_file("data/wine-quality.csv")?
@@ -82,40 +82,52 @@ pub fn create_plot(
 ) -> Result<(), Box<dyn Error>> {
     assert_eq!(2, test.ncols(), "{}", "wrong shape to build scatter plot");
 
+    let mut train_series = vec![vec![]; knn.nclasses()];
+    for each in train.rows() {
+        train_series[knn.predict(each) - 1].push(each);
+    }
+
     let root = SVGBackend::new(&filepath, (800, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
-    let mut temp = train.clone();
-    temp.append(Axis(0), test.view())?;
-
-    let ranges = calculate_ranges_2d(&temp).expect("Should not be empty");
-    let mut scatter_ctx = ChartBuilder::on(&root)
-        .caption(
-            "Wine - Alcohol x Malic Acid",
-            ("sans-serif", 20).into_font(),
-        )
+    let ranges = ranges(train, test);
+    let caption = "Wine - Alcohol x Malic Acid";
+    let mut cc = ChartBuilder::on(&root)
+        .caption(caption, ("sans-serif", 20).into_font())
         .margin(10)
         .x_label_area_size(30)
         .y_label_area_size(30)
         .build_cartesian_2d(ranges.0, ranges.1)?;
+    cc.configure_mesh().disable_mesh().draw()?;
 
-    scatter_ctx.configure_mesh().disable_mesh().draw()?;
-    plot_data(&mut scatter_ctx, test, knn, |s| s.filled())?;
-    plot_data(&mut scatter_ctx, train, knn, |s| s.stroke_width(1))?;
+    for (idx, each) in train_series.iter().enumerate() {
+        let color = Palette99::pick(idx);
+        cc.draw_series(PointSeries::of_element(
+            each.iter().map(|e| (e[0], e[1])),
+            3,
+            color.stroke_width(1),
+            &Circle::new,
+        ))?
+        .label(format!("Class {}", idx + 1))
+        .legend(move |c| Circle::new(c, 4, color.filled()));
+    }
+
+    cc.draw_series(test.axis_iter(Axis(0)).map(|row| {
+        let color = Palette99::pick(knn.predict(row) - 1);
+        Circle::new((row[0], row[1]), 3, color.filled())
+    }))?;
+
+    cc.configure_series_labels()
+        .background_style(WHITE.mix(0.8))
+        .border_style(BLACK)
+        .draw()?;
+
     root.present()?;
-
     Ok(())
 }
 
-fn plot_data(
-    scatter_ctx: &mut ChartContext<SVGBackend, Cartesian2d<RangedCoordf64, RangedCoordf64>>,
-    data: &Array2<f64>,
-    knn: &KNearest,
-    style_fn: fn(s: ShapeStyle) -> ShapeStyle,
-) -> Result<(), Box<dyn Error>> {
-    scatter_ctx.draw_series(data.axis_iter(Axis(0)).map(|row| {
-        let style = style_fn(Palette99::pick(knn.predict(row)).into());
-        Circle::new((row[0], row[1]), 3, style)
-    }))?;
-    Ok(())
+fn ranges(train: &Array2<f64>, test: &Array2<f64>) -> (Range<f64>, Range<f64>) {
+    let mut temp = train.clone();
+    temp.append(Axis(0), test.view()).expect("shapes match");
+    calculate_ranges_2d(&temp).expect("should not be empty")
 }

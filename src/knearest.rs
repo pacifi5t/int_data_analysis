@@ -17,6 +17,10 @@ impl KNearest {
         }
     }
 
+    pub fn nclasses(&self) -> usize {
+        *self.class_markers.iter().max().unwrap()
+    }
+
     pub fn predict(&self, point: ArrayView1<f64>) -> usize {
         let mut distances = Vec::new();
         for (i, each) in self.data.axis_iter(Axis(0)).enumerate() {
