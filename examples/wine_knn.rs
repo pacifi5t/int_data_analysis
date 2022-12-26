@@ -2,7 +2,7 @@ use chrono::Utc;
 use csv::{ReaderBuilder, StringRecord};
 use example_utils::*;
 use int_data_analysis::*;
-use ndarray::{s, Array2, Axis};
+use ndarray::{s, Array1, Array2, Axis};
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use rand::prelude::*;
@@ -10,6 +10,7 @@ use rand_xoshiro::Xoshiro256Plus;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::create_dir_all;
+use std::io::stdin;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let data = parse_file("data/wine-quality.csv")?
@@ -21,7 +22,37 @@ fn main() -> Result<(), Box<dyn Error>> {
     let now = Utc::now().format("(%H:%M:%S %d.%m.%Y)").to_string();
     create_dir_all("figures/wine")?;
     create_plot(format!("figures/wine/knn {}.svg", now), &train, &test, &knn)?;
+    predict_interactive(&knn)
+}
+
+fn predict_interactive(knn: &KNearest) -> Result<(), Box<dyn Error>> {
+    loop {
+        println!("\nType 2 float values to make prediction or 'exit' to quit the program");
+        let mut buf = String::new();
+        stdin().read_line(&mut buf).unwrap();
+
+        let args: Vec<&str> = buf.trim().split(' ').collect();
+        if args.is_empty() || args.len() > 2 {
+            println!("Error: empty input or too many args");
+        } else if args.len() == 1 && args[0] == "exit" {
+            break;
+        }
+
+        match predict_from_input(knn, &args) {
+            Err(e) => println!("Error: {}", e),
+            Ok(c) => println!("Class: {}", c),
+        }
+    }
+
     Ok(())
+}
+
+fn predict_from_input(knn: &KNearest, args: &Vec<&str>) -> Result<usize, Box<dyn Error>> {
+    let mut v = Vec::new();
+    for each in args {
+        v.push(each.parse::<f64>()?);
+    }
+    Ok(knn.predict(Array1::from_vec(v).view()))
 }
 
 fn parse_file(path: &str) -> Result<Array2<f64>, csv::Error> {
@@ -83,8 +114,8 @@ fn plot_data(
     style_fn: fn(s: ShapeStyle) -> ShapeStyle,
 ) -> Result<(), Box<dyn Error>> {
     scatter_ctx.draw_series(data.axis_iter(Axis(0)).map(|row| {
-        let style = map_class_to_color(knn.predict(row));
-        Circle::new((row[0], row[1]), 3, style_fn(style))
+        let style = style_fn(Palette99::pick(knn.predict(row)).into());
+        Circle::new((row[0], row[1]), 3, style)
     }))?;
     Ok(())
 }
