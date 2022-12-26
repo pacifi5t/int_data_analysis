@@ -45,7 +45,7 @@ pub fn normalize_data(data: &Array2<f64>) -> Array2<f64> {
     array
 }
 
-fn split_train_test(data: Array2<f64>, test_fraction: f64) -> (Array2<f64>, Array2<f64>) {
+pub fn split_train_test(data: Array2<f64>, test_fraction: f64) -> (Array2<f64>, Array2<f64>) {
     let train_len = ((1.0 - test_fraction) * data.nrows() as f64).ceil() as usize;
     let train = data.slice(s![..train_len, ..]).to_owned();
     let test = data.slice(s![train_len.., ..]).to_owned();
