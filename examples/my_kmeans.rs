@@ -48,7 +48,7 @@ pub fn plot_clusters(
     scatter_ctx.configure_mesh().disable_mesh().draw()?;
     scatter_ctx.draw_series(data.axis_iter(Axis(0)).map(|row| {
         let style = Palette99::pick(model.predict(row));
-        Circle::new((row[0], row[1]), 2, style.filled())
+        Circle::new((row[0], row[1]), 3, style.filled())
     }))?;
     root.present()?;
 

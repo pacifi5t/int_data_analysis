@@ -77,7 +77,7 @@ fn create_plot(filepath: String, model: &Model, data: &Array2<f64>) -> Result<()
         chart_ctx.draw_series(
             each.iter()
                 .enumerate()
-                .map(|(x, y)| Circle::new((x, *y), 3, Palette99::pick(idx).stroke_width(1))),
+                .map(|(x, y)| Circle::new((x, *y), 3, Palette99::pick(idx).filled())),
         )?;
     }
 
