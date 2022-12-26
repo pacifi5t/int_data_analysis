@@ -1,15 +1,12 @@
 use chrono::Utc;
 use csv::{ReaderBuilder, StringRecord};
-use example_utils::records_into_array;
+use example_utils::*;
 use int_data_analysis::kmeans::{KMeans, Model};
-use ndarray::{s, Array1, Array2, ArrayView1, Axis};
-use plotters::backend::BitMapBackend;
-use plotters::prelude::{
-    ChartBuilder, Circle, Color, IntoDrawingArea, IntoFont, LineSeries, ShapeStyle, BLACK, BLUE,
-    CYAN, GREEN, MAGENTA, RED, WHITE, YELLOW,
-};
+use ndarray::{s, Array2, Axis};
+use plotters::prelude::*;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::create_dir_all;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut reader = ReaderBuilder::new()
@@ -29,18 +26,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let best_model = models.get(&4).unwrap();
     println!("Result\n{:?}", best_model.centroids());
 
-    let now = Utc::now().format("(%Y-%m-%d %H:%M:%S)").to_string();
-    let filepath = format!("figures/examples/wine_quality {}.png", now);
-    create_plot("Wine quality", filepath, best_model, &data)?;
+    let now = Utc::now().format("(%H:%M:%S %d.%m.%Y)").to_string();
+    let filepath = format!("figures/wine/clustering {}.svg", now);
+    create_dir_all("figures/wine")?;
+    create_plot(filepath, best_model, &data)?;
     Ok(())
 }
 
-fn create_plot(
-    caption: &str,
-    filepath: String,
-    model: &Model,
-    data: &Array2<f64>,
-) -> Result<(), Box<dyn Error>> {
+fn create_plot(filepath: String, model: &Model, data: &Array2<f64>) -> Result<(), Box<dyn Error>> {
     let x_labels = [
         "Alcohol",
         "Malic Acid",
@@ -57,11 +50,10 @@ fn create_plot(
         "Proline",
     ];
 
-    let root = BitMapBackend::new(&filepath, (1200, 600)).into_drawing_area();
+    let root = SVGBackend::new(&filepath, (1200, 600)).into_drawing_area();
     root.fill(&WHITE)?;
 
     let mut chart_ctx = ChartBuilder::on(&root)
-        .caption(caption, ("sans-serif", 20).into_font())
         .margin(10)
         .margin_right(30)
         .x_label_area_size(30)
@@ -72,13 +64,12 @@ fn create_plot(
         .configure_mesh()
         .x_labels(model.centroids().ncols())
         .y_labels(8)
-        .light_line_style(&WHITE.mix(0.3))
+        .light_line_style(WHITE.mix(0.3))
         .x_label_formatter(&|n| String::from(x_labels[*n]))
         .draw()?;
 
-    let norm_data = normalize_centroids(&model.centroids(), &data);
-    let mut ctr = 0;
-    for each in norm_data.rows() {
+    let norm_data = normalize_centroids(&model.centroids(), data);
+    for (ctr, each) in norm_data.rows().into_iter().enumerate() {
         chart_ctx.draw_series(LineSeries::new(
             each.iter().enumerate().map(|(x, y)| (x, *y)),
             map_index_to_color(ctr),
@@ -86,9 +77,8 @@ fn create_plot(
         chart_ctx.draw_series(
             each.iter()
                 .enumerate()
-                .map(|(x, y)| Circle::new((x, *y), 3, map_index_to_color(ctr).filled())),
+                .map(|(x, y)| Circle::new((x, *y), 3, map_index_to_color(ctr).stroke_width(1))),
         )?;
-        ctr += 1;
     }
 
     root.present()?;
@@ -98,58 +88,9 @@ fn create_plot(
 fn normalize_centroids(centroids: &Array2<f64>, data: &Array2<f64>) -> Array2<f64> {
     let mut temp = data.clone();
     temp.append(Axis(0), centroids.view())
-        .expect("Should be fine");
+        .expect("shapes should match");
     let normalized = normalize_data(&temp);
     normalized
         .slice(s![normalized.nrows() - centroids.nrows().., ..])
         .into_owned()
-}
-
-fn normalize_data(data: &Array2<f64>) -> Array2<f64> {
-    let mut array: Array2<f64> = Array2::zeros((data.nrows(), 0));
-    for c in data.columns() {
-        let min = min(c);
-        let max = max(c);
-        let v: Vec<f64> = c
-            .into_iter()
-            .map(|each| (each - min) / (max - min))
-            .collect();
-        array
-            .push_column(Array1::from(v).view())
-            .expect("Column length match");
-    }
-    array
-}
-
-fn min(c: ArrayView1<f64>) -> f64 {
-    let mut min = f64::MAX;
-    for each in c {
-        if *each < min {
-            min = *each;
-        }
-    }
-    min
-}
-
-fn max(c: ArrayView1<f64>) -> f64 {
-    let mut max = f64::MIN;
-    for each in c {
-        if *each > max {
-            max = *each;
-        }
-    }
-    max
-}
-
-fn map_index_to_color(index: usize) -> ShapeStyle {
-    let color = match index {
-        0 => RED,
-        1 => GREEN,
-        2 => BLUE,
-        3 => MAGENTA,
-        4 => CYAN,
-        5 => YELLOW,
-        _ => BLACK,
-    };
-    color.into()
 }

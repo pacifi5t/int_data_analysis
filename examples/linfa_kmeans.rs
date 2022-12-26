@@ -1,6 +1,6 @@
 use approx::assert_abs_diff_eq;
 use csv::{ReaderBuilder, StringRecord};
-use example_utils::records_into_array;
+use example_utils::*;
 use linfa::traits::{Fit, Predict};
 use linfa::DatasetBase;
 use linfa_clustering::KMeans;
@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let records: Vec<StringRecord> = reader.records().map(|r| r.unwrap()).collect();
     let data = records_into_array(&records);
 
-    let dataset = DatasetBase::from(data.clone());
+    let dataset = DatasetBase::from(data);
     let model = KMeans::params_with_rng(n_clusters, Xoshiro256Plus::seed_from_u64(42))
         .tolerance(1e-2)
         .fit(&dataset)

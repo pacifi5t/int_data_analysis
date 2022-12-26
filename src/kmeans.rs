@@ -120,7 +120,7 @@ impl Model {
     }
 
     pub fn inertia(&self) -> f64 {
-        self.inertia.clone()
+        self.inertia
     }
 
     pub fn predict(&self, point: ArrayView1<f64>) -> usize {
@@ -140,7 +140,7 @@ impl Debug for Model {
             write!(f, "{:?}", row.to_vec())?;
 
             if i != self.centroids.nrows() - 1 {
-                write!(f, ",\n")?;
+                writeln!(f, ",")?;
             }
         }
 

@@ -17,12 +17,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     create_dir("data").unwrap_or(());
     let mut writer = Writer::from_path("data/clusters.csv")?;
 
-    writer.write_record(&["x", "y"])?;
+    writer.write_record(["x", "y"])?;
     for row in data.rows() {
         let vec: Vec<String> = row.into_iter().map(|e| e.to_string()).collect();
-        writer
-            .write_record(vec.as_slice())
-            .expect("Written successfully");
+        writer.write_record(vec.as_slice())?;
     }
 
     Ok(())

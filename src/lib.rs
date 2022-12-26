@@ -1,3 +1,5 @@
+pub use kmeans::{KMeans, Model};
+pub use knearest::KNearest;
 use ndarray::ArrayView1;
 
 pub mod kmeans;
