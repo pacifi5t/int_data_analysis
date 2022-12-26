@@ -70,8 +70,8 @@ fn plot_data(
     style_fn: fn(s: ShapeStyle) -> ShapeStyle,
 ) -> Result<(), Box<dyn Error>> {
     scatter_ctx.draw_series(data.axis_iter(Axis(0)).map(|row| {
-        let style = map_class_to_color(knn.predict(row));
-        Circle::new((row[0], row[1]), 3, style_fn(style))
+        let style = style_fn(Palette99::pick(knn.predict(row)).into());
+        Circle::new((row[0], row[1]), 3, style)
     }))?;
     Ok(())
 }

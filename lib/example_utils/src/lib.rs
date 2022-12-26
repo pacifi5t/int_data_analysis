@@ -51,20 +51,3 @@ pub fn split_train_test(data: Array2<f64>, test_fraction: f64) -> (Array2<f64>, 
     let test = data.slice(s![train_len.., ..]).to_owned();
     (train, test)
 }
-
-pub fn map_index_to_color(index: usize) -> ShapeStyle {
-    let color = match index {
-        0 => RED,
-        1 => GREEN,
-        2 => BLUE,
-        3 => MAGENTA,
-        4 => CYAN,
-        5 => YELLOW,
-        _ => BLACK,
-    };
-    color.into()
-}
-
-pub fn map_class_to_color(class: usize) -> ShapeStyle {
-    map_index_to_color(class - 1)
-}
