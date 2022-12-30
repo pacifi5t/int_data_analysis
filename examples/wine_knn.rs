@@ -23,8 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let now = Utc::now().format("(%H:%M:%S %d.%m.%Y)").to_string();
     create_dir_all("figures/wine")?;
     create_plot(format!("figures/wine/knn {}.svg", now), &train, &test, &knn)?;
-    // predict_interactive(&knn)
-    Ok(())
+    predict_interactive(&knn)
 }
 
 fn predict_interactive(knn: &KNearest) -> Result<(), Box<dyn Error>> {
@@ -34,7 +33,7 @@ fn predict_interactive(knn: &KNearest) -> Result<(), Box<dyn Error>> {
         stdin().read_line(&mut buf).unwrap();
 
         let args: Vec<&str> = buf.trim().split(' ').collect();
-        if args.is_empty() || args.len() > 2 {
+        if args.is_empty() || args.len() > 3 {
             println!("Error: empty input or too many args");
         } else if args.len() == 1 && args[0] == "exit" {
             break;
