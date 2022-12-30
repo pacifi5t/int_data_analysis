@@ -13,16 +13,18 @@ use std::io::stdin;
 use std::ops::Range;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let data = parse_file("data/wine-quality.csv")?
-        .slice(s![.., ..2usize])
-        .to_owned();
-    let (train, test) = split_train_test(data, 0.25);
+    let data = parse_file("data/wine-quality.csv")?.to_owned();
+    let (train, mut test) = split_train_test(data, 0.25);
+    let test2 = parse_file("data/wine-test2.csv")?.to_owned();
+    test.append(Axis(0), test2.view())?;
+
     let class_markers = clusterize_and_predict(&train);
     let knn = KNearest::new(11, train.clone(), class_markers);
     let now = Utc::now().format("(%H:%M:%S %d.%m.%Y)").to_string();
     create_dir_all("figures/wine")?;
     create_plot(format!("figures/wine/knn {}.svg", now), &train, &test, &knn)?;
-    predict_interactive(&knn)
+    // predict_interactive(&knn)
+    Ok(())
 }
 
 fn predict_interactive(knn: &KNearest) -> Result<(), Box<dyn Error>> {
@@ -80,47 +82,61 @@ pub fn create_plot(
     test: &Array2<f64>,
     knn: &KNearest,
 ) -> Result<(), Box<dyn Error>> {
-    assert_eq!(2, test.ncols(), "{}", "wrong shape to build scatter plot");
+    let labels = vec!["Alcohol", "Malic Acid", "Ash"];
 
     let mut train_series = vec![vec![]; knn.nclasses()];
     for each in train.rows() {
         train_series[knn.predict(each) - 1].push(each);
     }
 
-    let root = SVGBackend::new(&filepath, (800, 600)).into_drawing_area();
+    let root = SVGBackend::new(&filepath, (2400, 1800)).into_drawing_area();
     root.fill(&WHITE)?;
+    let drawing_areas = root.split_evenly((3, 3));
 
-    let ranges = ranges(train, test);
-    let caption = "Wine - Alcohol x Malic Acid";
-    let mut cc = ChartBuilder::on(&root)
-        .caption(caption, ("sans-serif", 20).into_font())
-        .margin(10)
-        .x_label_area_size(30)
-        .y_label_area_size(30)
-        .build_cartesian_2d(ranges.0, ranges.1)?;
-    cc.configure_mesh().disable_mesh().draw()?;
+    for (i, each) in drawing_areas.iter().enumerate() {
+        let x = i / 3;
+        let y = i % 3;
 
-    for (idx, each) in train_series.iter().enumerate() {
-        let color = Palette99::pick(idx);
-        cc.draw_series(PointSeries::of_element(
-            each.iter().map(|e| (e[0], e[1])),
-            3,
-            color.stroke_width(1),
-            &Circle::new,
-        ))?
-        .label(format!("Class {}", idx + 1))
-        .legend(move |c| Circle::new(c, 4, color.filled()));
+        let mut r_train = Array2::default([train.nrows(), 0]);
+        r_train.push_column(train.slice(s![.., x]))?;
+        r_train.push_column(train.slice(s![.., y]))?;
+
+        let mut r_test = Array2::default([test.nrows(), 0]);
+        r_test.push_column(test.slice(s![.., x]))?;
+        r_test.push_column(test.slice(s![.., y]))?;
+
+        let ranges = ranges(&r_train, &r_test);
+        let caption = format!("{} x {}", labels[x], labels[y]);
+        let mut cc = ChartBuilder::on(&each)
+            .caption(caption, ("sans-serif", 20).into_font())
+            .margin(10)
+            .x_label_area_size(30)
+            .y_label_area_size(30)
+            .build_cartesian_2d(ranges.0, ranges.1)?;
+        cc.configure_mesh().disable_mesh().draw()?;
+
+        for (idx, each) in train_series.iter().enumerate() {
+            let color = Palette99::pick(idx);
+            cc.draw_series(PointSeries::of_element(
+                each.iter().map(|e| (e[x], e[y])),
+                3,
+                color.stroke_width(1),
+                &Circle::new,
+            ))?
+            .label(format!("Class {}", idx + 1))
+            .legend(move |c| Circle::new(c, 4, color.filled()));
+        }
+
+        cc.draw_series(test.axis_iter(Axis(0)).map(|row| {
+            let color = Palette99::pick(knn.predict(row) - 1);
+            Circle::new((row[x], row[y]), 3, color.filled())
+        }))?;
+
+        cc.configure_series_labels()
+            .background_style(WHITE.mix(0.8))
+            .border_style(BLACK)
+            .draw()?;
     }
-
-    cc.draw_series(test.axis_iter(Axis(0)).map(|row| {
-        let color = Palette99::pick(knn.predict(row) - 1);
-        Circle::new((row[0], row[1]), 3, color.filled())
-    }))?;
-
-    cc.configure_series_labels()
-        .background_style(WHITE.mix(0.8))
-        .border_style(BLACK)
-        .draw()?;
 
     root.present()?;
     Ok(())

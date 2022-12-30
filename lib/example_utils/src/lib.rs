@@ -25,7 +25,9 @@ pub fn calculate_ranges_2d(data: &Array2<f64>) -> Option<(Range<f64>, Range<f64>
     let y_min = y_col.iter().min_by(cmp_fn)?.floor();
     let y_max = y_col.iter().max_by(cmp_fn)?.ceil();
 
-    let ofs = 2f64;
+    let x_ofs = (x_max - x_min) / 20.0;
+    let y_ofs = (y_max - y_min) / 20.0;
+    let ofs = x_ofs.min(y_ofs);
     Some((x_min - ofs..x_max + ofs, y_min - ofs..y_max + ofs))
 }
 
