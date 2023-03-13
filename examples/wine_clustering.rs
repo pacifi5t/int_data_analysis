@@ -1,12 +1,12 @@
 use chrono::Utc;
 use csv::{ReaderBuilder, StringRecord};
-use example_utils::*;
 use int_data_analysis::kmeans::{KMeans, Model};
 use ndarray::{s, Array2, Axis};
 use plotters::prelude::*;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::create_dir_all;
+use int_data_analysis::example_utils::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut reader = ReaderBuilder::new()

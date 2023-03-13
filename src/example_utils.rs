@@ -1,8 +1,5 @@
-#![allow(unused)]
-
 use csv::StringRecord;
 use ndarray::{s, Array1, Array2};
-use plotters::prelude::*;
 use std::ops::Range;
 
 pub fn records_into_array(records: &Vec<StringRecord>) -> Array2<f64> {

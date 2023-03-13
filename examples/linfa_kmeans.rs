@@ -1,6 +1,5 @@
 use approx::assert_abs_diff_eq;
 use csv::{ReaderBuilder, StringRecord};
-use example_utils::*;
 use linfa::traits::{Fit, Predict};
 use linfa::DatasetBase;
 use linfa_clustering::KMeans;
@@ -8,6 +7,7 @@ use ndarray::{array, Axis};
 use ndarray_rand::rand::SeedableRng;
 use rand_xoshiro::Xoshiro256Plus;
 use std::error::Error;
+use int_data_analysis::example_utils::*;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let expected_centroids = array![[0., 1.], [-10., 20.], [-1., 10.]];

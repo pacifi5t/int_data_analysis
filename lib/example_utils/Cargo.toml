@@ -1,9 +1,0 @@
-[package]
-name = "example_utils"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-csv = "1.1.6"
-ndarray = "0.15.6"
-plotters = "0.3.4"

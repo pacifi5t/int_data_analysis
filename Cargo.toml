@@ -4,20 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-linfa-datasets = { version = "0.6.0", features = ["generate"] }
-rand = "0.8.5"
+approx = "0.5.1"
+csv = "1.1.6"
 ndarray = { version = "0.15.6", features = ["approx-0_5"] }
 ndarray-rand = "0.14.0"
-approx = "0.5.1"
+rand = "0.8.5"
 
 [dev-dependencies]
+chrono = "0.4.22"
 linfa = "0.6.0"
 linfa-clustering = "0.6.0"
-plotters = "0.3.1"
-chrono = "0.4.22"
-csv = "1.1.6"
+linfa-datasets = { version = "0.6.0", features = ["generate"] }
+plotters = "0.3.4"
 rand_xoshiro = "0.6.0"
-example_utils = { path = "lib/example_utils" }
 
 [profile.release]
 lto = true
